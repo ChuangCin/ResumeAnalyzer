@@ -1,0 +1,32 @@
+package com.resume.analyzer.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+        http
+                // 彻底关闭 CSRF
+                .csrf(csrf -> csrf.disable())
+
+                // 关闭默认登录页面
+                .formLogin(form -> form.disable())
+
+                // 关闭 httpBasic
+                .httpBasic(basic -> basic.disable())
+
+                // 放行所有请求（先测试通）
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll()
+                );
+
+        return http.build();
+    }
+}
