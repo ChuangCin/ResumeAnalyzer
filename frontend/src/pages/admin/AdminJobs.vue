@@ -1,10 +1,13 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { adminListJobs, adminCreateJob, adminUpdateJob, adminDeleteJob } from '../../api/api'
+import { adminListJobsPage, adminCreateJob, adminUpdateJob, adminDeleteJob } from '../../api/api'
 
 const list = ref([])
 const loading = ref(false)
 const error = ref('')
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 const showDialog = ref(false)
 const editingId = ref(null)
 const form = ref({
@@ -87,14 +90,27 @@ async function fetchList() {
   loading.value = true
   error.value = ''
   try {
-    const data = await adminListJobs()
-    list.value = Array.isArray(data) ? data : []
+    const data = await adminListJobsPage(page.value, pageSize.value)
+    list.value = Array.isArray(data?.list) ? data.list : []
+    total.value = Number(data?.total) || 0
   } catch (e) {
     error.value = e.message || '加载岗位列表失败'
     list.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
+}
+
+function onPageChange(p) {
+  page.value = p
+  fetchList()
+}
+
+function onSizeChange(s) {
+  pageSize.value = s
+  page.value = 1
+  fetchList()
 }
 
 function formatTime(t) {
@@ -124,7 +140,6 @@ onMounted(() => fetchList())
         <table class="admin-table">
           <thead>
             <tr>
-              <th>ID</th>
               <th>岗位名称</th>
               <th>分类</th>
               <th>公司</th>
@@ -136,7 +151,6 @@ onMounted(() => fetchList())
           </thead>
           <tbody>
             <tr v-for="job in list" :key="job.id" class="admin-table-row">
-              <td>{{ job.id }}</td>
               <td>{{ job.jobName || '--' }}</td>
               <td>{{ job.jobCategory || '--' }}</td>
               <td>{{ job.company || '--' }}</td>
@@ -156,6 +170,17 @@ onMounted(() => fetchList())
           </tbody>
         </table>
         <div v-if="!list.length && !loading" class="admin-empty">暂无岗位</div>
+        <div v-if="total > 0" class="admin-pagination-wrap">
+          <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50]"
+            :total="total"
+            layout="total, sizes, prev, pager, next"
+            @current-change="onPageChange"
+            @size-change="onSizeChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -257,4 +282,5 @@ onMounted(() => fetchList())
 .admin-form-row-group { display: flex; gap: 12px; }
 .admin-form-row-group .admin-form-row { flex: 1; }
 .admin-dialog-actions { margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px; }
+.admin-pagination-wrap { margin-top: 16px; display: flex; justify-content: flex-end; }
 </style>

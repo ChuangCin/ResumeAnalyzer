@@ -46,7 +46,7 @@ async function handleLogin() {
     if (data.phone) localStorage.setItem('phone', data.phone)
     if (data.email) localStorage.setItem('email', data.email)
     if (data.role) localStorage.setItem('role', data.role)
-    if (data.avatar) localStorage.setItem('avatar', data.avatar)
+    if (data.id != null && data.avatar) localStorage.setItem(`avatar_${data.id}`, data.avatar)
     if (data.role === 'admin') router.push('/admin')
     else router.push('/upload')
   } catch (e) {
@@ -91,8 +91,8 @@ async function handleLogin() {
                   <el-icon :size="20"><VideoCamera /></el-icon>
                 </div>
                 <div>
-                  <h4 class="auth-feature-title">AI 模拟面试</h4>
-                  <p class="auth-feature-desc">多场景、多维度实时对话，告别面试紧张。</p>
+                  <h4 class="auth-feature-title">AI 精准匹配</h4>
+                  <p class="auth-feature-desc">匹配合适公司岗位，发起咨询。</p>
                 </div>
               </div>
               <div class="auth-feature">

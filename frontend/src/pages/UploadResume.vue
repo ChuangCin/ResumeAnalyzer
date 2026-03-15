@@ -1,7 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { uploadResume, avatarUrl } from '../api/api'
+import { uploadResume, avatarUrl, avatarStorageKey, getUnreadCount } from '../api/api'
 import {
   ArrowRight,
   ChatDotSquare,
@@ -20,20 +20,22 @@ const router = useRouter()
 
 const userId = computed(() => localStorage.getItem('userId'))
 const username = computed(() => localStorage.getItem('username') || '用户')
-const headerAvatarUrl = computed(() => avatarUrl(localStorage.getItem('avatar')))
+const headerAvatarUrl = computed(() => avatarUrl(userId.value ? localStorage.getItem(avatarStorageKey(userId.value)) : null))
 
 function handleCommand(cmd) {
   if (cmd === 'profile') router.push('/profile')
   else if (cmd === 'messages') router.push('/messages')
   else if (cmd === 'logout') {
+    const uid = userId.value
+    if (uid) localStorage.removeItem(avatarStorageKey(uid) || '')
     localStorage.removeItem('token')
     localStorage.removeItem('userId')
     localStorage.removeItem('username')
-    localStorage.removeItem('avatar')
     router.push('/login')
   }
 }
 
+const unreadCount = ref(0)
 const file = ref(null)
 const loading = ref(false)
 const error = ref('')
@@ -74,6 +76,18 @@ function handleDrop(e) {
 function triggerFilePick() {
   fileInputRef.value?.click()
 }
+
+onMounted(async () => {
+  const id = userId.value
+  if (id) {
+    try {
+      const n = await getUnreadCount(id)
+      unreadCount.value = typeof n === 'number' ? n : (n ?? 0)
+    } catch (_) {
+      unreadCount.value = 0
+    }
+  }
+})
 
 async function handleUpload() {
   error.value = ''
@@ -156,23 +170,34 @@ async function handleUpload() {
           <el-icon v-if="route.path === '/resume-library'" class="upload-menu-arrow"><ArrowRight /></el-icon>
         </button>
 
-        <button class="upload-menu-item" type="button">
+        <button
+          class="upload-menu-item"
+          :class="{ 'upload-menu-item--active': route.path === '/smart-match' }"
+          type="button"
+          @click="router.push('/smart-match')"
+        >
           <div class="upload-menu-left">
             <div class="upload-menu-icon-circle">
               <el-icon class="upload-menu-icon"><UserFilled /></el-icon>
             </div>
             <div class="upload-menu-text">
-              <div class="upload-menu-title">面试记录</div>
-              <div class="upload-menu-sub">查看面试历史</div>
+              <div class="upload-menu-title">智能匹配</div>
+              <div class="upload-menu-sub">简历匹配岗位并发起咨询</div>
             </div>
           </div>
+          <el-icon v-if="route.path === '/smart-match'" class="upload-menu-arrow"><ArrowRight /></el-icon>
         </button>
 
         <div class="upload-menu-section-title upload-menu-section-title--spaced">
           知识库
         </div>
 
-        <button class="upload-menu-item" type="button">
+        <button
+          class="upload-menu-item"
+          :class="{ 'upload-menu-item--active': route.path === '/knowledge' }"
+          type="button"
+          @click="router.push('/knowledge')"
+        >
           <div class="upload-menu-left">
             <div class="upload-menu-icon-circle">
               <el-icon class="upload-menu-icon"><Collection /></el-icon>
@@ -182,9 +207,15 @@ async function handleUpload() {
               <div class="upload-menu-sub">管理知识文档</div>
             </div>
           </div>
+          <el-icon v-if="route.path === '/knowledge'" class="upload-menu-arrow"><ArrowRight /></el-icon>
         </button>
 
-        <button class="upload-menu-item" type="button">
+        <button
+          class="upload-menu-item"
+          :class="{ 'upload-menu-item--active': route.path === '/qa-assistant' }"
+          type="button"
+          @click="router.push('/qa-assistant')"
+        >
           <div class="upload-menu-left">
             <div class="upload-menu-icon-circle">
               <el-icon class="upload-menu-icon"><ChatDotSquare /></el-icon>
@@ -194,6 +225,7 @@ async function handleUpload() {
               <div class="upload-menu-sub">基于知识库问答</div>
             </div>
           </div>
+          <el-icon v-if="route.path === '/qa-assistant'" class="upload-menu-arrow"><ArrowRight /></el-icon>
         </button>
       </nav>
     </aside>
@@ -215,16 +247,14 @@ async function handleUpload() {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">
-                  <el-icon><User /></el-icon>
-                  个人中心
+                  <span class="avatar-menu-inner"><el-icon><User /></el-icon>个人中心</span>
                 </el-dropdown-item>
-                <el-dropdown-item command="messages">
-                  <el-icon><Message /></el-icon>
-                  我的消息
+                <el-dropdown-item command="messages" class="msg-dropdown-item">
+                  <span class="avatar-menu-inner"><el-icon><Message /></el-icon>我的消息</span>
+                  <span v-if="unreadCount > 0" class="msg-unread-dot"></span>
                 </el-dropdown-item>
                 <el-dropdown-item command="logout" divided>
-                  <el-icon><SwitchButton /></el-icon>
-                  退出
+                  <span class="avatar-menu-inner"><el-icon><SwitchButton /></el-icon>退出</span>
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>

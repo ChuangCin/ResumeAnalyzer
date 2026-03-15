@@ -1,5 +1,6 @@
 package com.resume.analyzer.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -7,6 +8,7 @@ import java.time.LocalDateTime;
 @Data
 @Entity
 @Table(name = "match_result")
+@TableName("match_result")
 public class MatchResult {
 
     @Id

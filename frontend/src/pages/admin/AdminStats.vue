@@ -9,7 +9,7 @@ const stats = ref({
   userCount: 0,
   jobCount: 0,
   resumeCount: 0,
-  analysisCount: 0
+  matchCount: 0
 })
 
 async function fetchStats() {
@@ -68,12 +68,12 @@ onMounted(() => fetchStats())
         </div>
       </div>
       <div class="admin-stat-card">
-        <div class="admin-stat-icon admin-stat-icon--analysis">
+        <div class="admin-stat-icon admin-stat-icon--match">
           <el-icon :size="28"><DataAnalysis /></el-icon>
         </div>
         <div class="admin-stat-content">
-          <div class="admin-stat-value">{{ stats.analysisCount }}</div>
-          <div class="admin-stat-label">分析记录数</div>
+          <div class="admin-stat-value">{{ stats.matchCount }}</div>
+          <div class="admin-stat-label">匹配数量</div>
         </div>
       </div>
     </div>
@@ -110,7 +110,7 @@ onMounted(() => fetchStats())
 .admin-stat-icon--user { background: linear-gradient(135deg, #6366f1, #4f46e5); }
 .admin-stat-icon--job { background: linear-gradient(135deg, #22c55e, #16a34a); }
 .admin-stat-icon--resume { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.admin-stat-icon--analysis { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+.admin-stat-icon--match { background: linear-gradient(135deg, #06b6d4, #0891b2); }
 
 .admin-stat-value {
   font-size: 28px;

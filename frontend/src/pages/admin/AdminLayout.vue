@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowRight,
@@ -13,22 +13,27 @@ import {
   Message,
   SwitchButton
 } from '@element-plus/icons-vue'
-import { avatarUrl } from '../../api/api'
+import { avatarUrl, avatarStorageKey, adminGetInquiryUnreadCount } from '../../api/api'
 
 const route = useRoute()
 const router = useRouter()
 
+const userId = computed(() => localStorage.getItem('userId'))
 const username = computed(() => localStorage.getItem('username') || '管理员')
-const headerAvatarUrl = computed(() => avatarUrl(localStorage.getItem('avatar')))
+const unreadInquiryCount = ref(0)
+const headerAvatar = ref('')
+provide('headerAvatar', headerAvatar)
+const headerAvatarUrl = computed(() => avatarUrl(headerAvatar.value))
 
 const navItems = [
-  { path: '/admin/profile', label: '个人中心', sub: '管理个人信息', icon: User },
   { path: '/admin/users', label: '用户管理', sub: '管理用户信息', icon: UserFilled },
   { path: '/admin/jobs', label: '岗位管理', sub: '管理岗位信息', icon: List },
   { path: '/admin/analysis', label: '简历分析结果', sub: '查看分析结果', icon: Document },
   { path: '/admin/stats', label: '系统统计', sub: '查看统计数据', icon: DataAnalysis },
   { path: '/admin/maintenance', label: '系统维护', sub: '系统维护', icon: Setting }
 ]
+
+const hideSidebar = computed(() => route.path === '/admin/profile')
 
 function isActive(path) {
   return route.path === path
@@ -38,20 +43,46 @@ function handleCommand(cmd) {
   if (cmd === 'profile') router.push('/admin/profile')
   else if (cmd === 'messages') router.push('/admin/messages')
   else if (cmd === 'logout') {
+    const uid = localStorage.getItem('userId')
+    if (uid) localStorage.removeItem(avatarStorageKey(uid) || '')
     localStorage.removeItem('token')
     localStorage.removeItem('userId')
     localStorage.removeItem('username')
     localStorage.removeItem('role')
-    localStorage.removeItem('avatar')
+    headerAvatar.value = ''
     router.push('/login')
   }
 }
 
+async function fetchUnreadInquiries() {
+  const id = localStorage.getItem('userId')
+  if (!id) return
+  try {
+    const n = await adminGetInquiryUnreadCount(id)
+    unreadInquiryCount.value = typeof n === 'number' ? n : (n || 0)
+  } catch (_) {
+    unreadInquiryCount.value = 0
+  }
+}
+
+onMounted(() => {
+  const key = avatarStorageKey(userId.value)
+  headerAvatar.value = (key && localStorage.getItem(key)) || ''
+  fetchUnreadInquiries()
+  window.addEventListener('admin-messages-updated', fetchUnreadInquiries)
+})
+watch(() => route.path, (path) => {
+  if (path === '/admin/messages') fetchUnreadInquiries()
+})
+onUnmounted(() => {
+  window.removeEventListener('admin-messages-updated', fetchUnreadInquiries)
+})
+
 </script>
 
 <template>
-  <div class="admin-layout">
-    <aside class="admin-sidebar">
+  <div class="admin-layout" :class="{ 'admin-layout--no-sidebar': hideSidebar }">
+    <aside v-if="!hideSidebar" class="admin-sidebar">
       <div class="admin-logo">
         <div class="admin-logo-icon">
           <el-icon :size="18"><MagicStick /></el-icon>
@@ -98,16 +129,14 @@ function handleCommand(cmd) {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">
-                  <el-icon><User /></el-icon>
-                  个人中心
+                  <span class="avatar-menu-inner"><el-icon><User /></el-icon>个人中心</span>
                 </el-dropdown-item>
-                <el-dropdown-item command="messages">
-                  <el-icon><Message /></el-icon>
-                  我的消息
+                <el-dropdown-item command="messages" class="msg-dropdown-item">
+                  <span class="avatar-menu-inner"><el-icon><Message /></el-icon>我的消息</span>
+                  <span v-if="unreadInquiryCount > 0" class="msg-unread-dot" title="未回复咨询"></span>
                 </el-dropdown-item>
                 <el-dropdown-item command="logout" divided>
-                  <el-icon><SwitchButton /></el-icon>
-                  退出
+                  <span class="avatar-menu-inner"><el-icon><SwitchButton /></el-icon>退出</span>
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -122,32 +151,51 @@ function handleCommand(cmd) {
 </template>
 
 <style scoped>
+/* 与用户端一致：固定高度、侧栏与主内容留间距、100% 缩放完整显示 */
 .admin-layout {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
+  gap: 28px;
   width: 100%;
   max-width: 1280px;
-  min-height: 100vh;
+  height: calc(100vh - 72px);
+  max-height: calc(100vh - 72px);
   margin: 0 auto;
+  padding: 16px 20px 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+  align-items: stretch;
+}
+
+.admin-layout--no-sidebar {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 
 .admin-sidebar {
-  padding: 24px 18px;
+  width: 240px;
+  min-width: 240px;
+  max-width: 240px;
+  height: 100%;
+  max-height: 100%;
+  padding: 18px 14px;
   background: linear-gradient(180deg, #4f46e5, #6366f1);
-  border-radius: 24px;
-  margin: 20px;
-  margin-right: 20px;
+  border-radius: 20px;
   color: #e5e7ff;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   box-shadow: 0 18px 40px rgba(79, 70, 229, 0.35);
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .admin-logo {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .admin-logo-icon {
@@ -167,9 +215,10 @@ function handleCommand(cmd) {
 
 .admin-menu {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .admin-menu-section-title {
@@ -193,6 +242,10 @@ function handleCommand(cmd) {
   color: inherit;
   text-align: left;
   transition: background 0.2s;
+  width: 100%;
+  min-height: 48px;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .admin-menu-item:hover {
@@ -226,10 +279,12 @@ function handleCommand(cmd) {
 .admin-menu-arrow { font-size: 18px; opacity: 0.8; }
 
 .admin-main {
-  padding: 0 20px 40px;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  padding-right: 8px;
 }
 
 .admin-main-header {
@@ -237,7 +292,7 @@ function handleCommand(cmd) {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 0 12px;
+  padding: 0 0 12px;
   flex-shrink: 0;
 }
 
@@ -276,19 +331,38 @@ function handleCommand(cmd) {
 
 .admin-main-body {
   flex: 1;
+  min-height: 0;
   min-width: 0;
+  overflow-y: auto;
   padding-top: 0;
 }
 
-.admin-page-header { margin-bottom: 24px; }
+.admin-page-header { margin-bottom: 16px; }
 .admin-page-title { font-size: 24px; font-weight: 600; color: #1e293b; margin: 0 0 8px; }
 .admin-page-subtitle { font-size: 14px; color: #64748b; margin: 0; }
 .admin-card {
-  background: #fff; border-radius: 20px; padding: 24px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
 }
 .admin-error {
-  padding: 16px; color: #dc2626; background: #fef2f2; border-radius: 12px; margin-bottom: 20px;
+  padding: 16px;
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 12px;
+  margin-bottom: 20px;
 }
 .admin-loading { padding: 40px; text-align: center; color: #64748b; }
+
+@media (max-width: 900px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 16px;
+    height: auto;
+    max-height: none;
+  }
+  .admin-sidebar { display: none; }
+}
 </style>

@@ -85,7 +85,6 @@ onMounted(() => fetchList())
         <table class="admin-table">
           <thead>
             <tr>
-              <th>ID</th>
               <th>手机号（账号）</th>
               <th>邮箱</th>
               <th>昵称</th>
@@ -96,7 +95,6 @@ onMounted(() => fetchList())
           </thead>
           <tbody>
             <tr v-for="user in list" :key="user.id" class="admin-table-row">
-              <td>{{ user.id }}</td>
               <td>
                 <template v-if="editingId === user.id">
                   <input v-model="editForm.phone" class="admin-inline-input" type="tel" placeholder="手机号" />

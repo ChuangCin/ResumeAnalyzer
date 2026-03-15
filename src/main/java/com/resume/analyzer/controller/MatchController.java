@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/match")
@@ -31,10 +32,17 @@ public class MatchController {
         return matchService.match(resumeId, jobId);
     }
 
+    /** 一键匹配：异步执行，立即返回，避免长时间阻塞与超时 */
     @PostMapping("/resume/{resumeId}/run")
     public Result<String> runMatchForResume(@PathVariable Long resumeId) {
-        matchService.runMatchForResume(resumeId);
-        return Result.success("ok");
+        CompletableFuture.runAsync(() -> {
+            try {
+                matchService.runMatchForResume(resumeId);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        return Result.success("匹配任务已提交，请稍后刷新页面查看结果");
     }
 
     @GetMapping("/resume/{resumeId}")

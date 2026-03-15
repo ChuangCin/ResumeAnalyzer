@@ -15,19 +15,23 @@ import java.util.List;
 @Service
 public class AnalysisService {
 
+    private static final String CACHE_ANALYSIS_PREFIX = "analysis:";
+
     private final ResumeRepository resumeRepository;
     private final AnalysisRepository analysisRepository;
     private final AIService aiService;
+    private final CacheService cacheService;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
     public AnalysisService(ResumeRepository resumeRepository,
                            AnalysisRepository analysisRepository,
-                           AIService aiService) {
-
+                           AIService aiService,
+                           CacheService cacheService) {
         this.resumeRepository = resumeRepository;
         this.analysisRepository = analysisRepository;
         this.aiService = aiService;
+        this.cacheService = cacheService;
     }
 
     public Result<AnalysisResult> analyze(Long resumeId) {
@@ -87,10 +91,17 @@ public class AnalysisService {
         }
 
         analysisRepository.save(result);
-
+        cacheService.delete(CACHE_ANALYSIS_PREFIX + resumeId);
         return Result.success(result);
     }
+
+    @SuppressWarnings("unchecked")
     public List<AnalysisResult> getByResumeId(Long resumeId) {
-        return analysisRepository.findByResumeId(resumeId);
+        String key = CACHE_ANALYSIS_PREFIX + resumeId;
+        List<AnalysisResult> cached = cacheService.get(key, List.class);
+        if (cached != null) return cached;
+        List<AnalysisResult> list = analysisRepository.findByResumeId(resumeId);
+        cacheService.set(key, list);
+        return list;
     }
 }

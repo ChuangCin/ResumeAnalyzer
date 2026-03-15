@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/resume")
@@ -18,13 +19,29 @@ public class ResumeController {
         this.resumeService = resumeService;
     }
 
+    @GetMapping("/list/page")
+    public Result<Map<String, Object>> listPage(
+            @RequestParam("userId") Long userId,
+            @RequestParam(value = "page", defaultValue = "1") Integer page,
+            @RequestParam(value = "size", defaultValue = "10") Integer size
+    ) {
+        return Result.success(resumeService.listByUserIdPage(userId, page, size));
+    }
+
     @PostMapping("/upload")
-    public Result upload(
+    public Result<?> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam("userId") Long userId
-    ) throws Exception {
-
-        return resumeService.upload(file, userId);
+    ) {
+        try {
+            return resumeService.upload(file, userId);
+        } catch (Exception e) {
+            String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            if (msg.contains("Connection") || msg.contains("MinIO") || msg.contains("bucket")) {
+                msg = "文件存储服务异常，请确认 MinIO 已启动且配置正确（endpoint、accessKey、secretKey、bucketName）。" + " 详情: " + msg;
+            }
+            return Result.error(msg);
+        }
     }
 
     @GetMapping("/list")

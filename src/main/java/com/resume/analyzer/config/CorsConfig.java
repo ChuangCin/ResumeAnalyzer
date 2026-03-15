@@ -24,9 +24,7 @@ public class CorsConfig {
 
             @Override
             public void addResourceHandlers(ResourceHandlerRegistry registry) {
-                String avatarsPath = "file:" + System.getProperty("user.dir") + "/uploads/avatars/";
-                registry.addResourceHandler("/avatars/**")
-                        .addResourceLocations(avatarsPath);
+                // 头像由 AvatarController 统一处理（本地或 MinIO），不再使用静态映射
             }
         };
     }

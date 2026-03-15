@@ -1,9 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getUserInfo, updateUserProfile, uploadAvatar, avatarUrl } from '../api/api'
+import { getUserInfo, updateUserProfile, uploadAvatar, avatarUrl, avatarStorageKey } from '../api/api'
 import {
-  ArrowRight,
+  ArrowLeft,
   Document,
   MagicStick,
   UploadFilled,
@@ -41,7 +41,7 @@ async function fetchUser() {
     email.value = data.email || ''
     username.value = data.username || ''
     avatar.value = data.avatar || ''
-    if (data.avatar) localStorage.setItem('avatar', data.avatar)
+    if (id && data.avatar) localStorage.setItem(avatarStorageKey(id), data.avatar)
   } catch (e) {
     const localPhone = localStorage.getItem('phone')
     const localEmail = localStorage.getItem('email')
@@ -115,9 +115,9 @@ async function onAvatarFileChange(e) {
   saveError.value = ''
   try {
     const data = await uploadAvatar(id, file)
-    if (data.avatar) {
+    if (data.avatar && id) {
       avatar.value = data.avatar
-      localStorage.setItem('avatar', data.avatar)
+      localStorage.setItem(avatarStorageKey(id), data.avatar)
     }
     saveSuccess.value = '头像已更新'
   } catch (err) {
@@ -134,7 +134,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="upload-layout">
+  <div class="upload-layout profile-layout">
     <aside class="upload-sidebar">
       <div class="upload-logo">
         <div class="upload-logo-icon">
@@ -174,6 +174,10 @@ onMounted(() => {
 
     <div class="upload-main">
       <div class="upload-header">
+        <button type="button" class="profile-back-btn" @click="router.back()">
+          <el-icon><ArrowLeft /></el-icon>
+          返回
+        </button>
         <div class="upload-title-block">
           <div class="upload-title">个人中心</div>
           <div class="upload-subtitle">管理您的个人信息</div>
@@ -250,6 +254,15 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.profile-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.profile-layout .upload-sidebar {
+  display: none;
+}
+
 .profile-card {
   max-width: 560px;
 }
@@ -310,5 +323,24 @@ onMounted(() => {
 
 .profile-actions {
   margin-top: 24px;
+}
+
+.profile-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #64748b;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.profile-back-btn:hover {
+  color: #475569;
+  background: #e2e8f0;
 }
 </style>

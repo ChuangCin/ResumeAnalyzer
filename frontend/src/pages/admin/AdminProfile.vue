@@ -1,10 +1,12 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getUserInfo, updateUserProfile, uploadAvatar, avatarUrl } from '../../api/api'
+import { getUserInfo, updateUserProfile, uploadAvatar, avatarUrl, avatarStorageKey } from '../../api/api'
+import { ArrowLeft } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userId = computed(() => localStorage.getItem('userId'))
+const headerAvatar = inject('headerAvatar', ref(''))
 
 const phone = ref('')
 const email = ref('')
@@ -34,7 +36,7 @@ async function fetchUser() {
     email.value = data.email || ''
     username.value = data.username || ''
     avatar.value = data.avatar || ''
-    if (data.avatar) localStorage.setItem('avatar', data.avatar)
+    if (id && data.avatar) localStorage.setItem(avatarStorageKey(id), data.avatar)
   } catch (e) {
     const localPhone = localStorage.getItem('phone')
     const localEmail = localStorage.getItem('email')
@@ -104,9 +106,10 @@ async function onAvatarFileChange(e) {
   saveError.value = ''
   try {
     const data = await uploadAvatar(id, file)
-    if (data.avatar) {
+    if (data.avatar && id) {
       avatar.value = data.avatar
-      localStorage.setItem('avatar', data.avatar)
+      localStorage.setItem(avatarStorageKey(id), data.avatar)
+      if (headerAvatar) headerAvatar.value = data.avatar
     }
     saveSuccess.value = '头像已更新'
   } catch (err) {
@@ -125,6 +128,10 @@ onMounted(() => {
 <template>
   <div class="admin-page">
     <div class="admin-page-header">
+      <button type="button" class="admin-back-btn" @click="router.back()">
+        <el-icon><ArrowLeft /></el-icon>
+        返回
+      </button>
       <h1 class="admin-page-title">个人中心</h1>
       <p class="admin-page-subtitle">管理您的个人信息</p>
     </div>
@@ -258,5 +265,24 @@ onMounted(() => {
 
 .admin-profile-actions {
   margin-top: 24px;
+}
+
+.admin-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #64748b;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.admin-back-btn:hover {
+  color: #475569;
+  background: #e2e8f0;
 }
 </style>

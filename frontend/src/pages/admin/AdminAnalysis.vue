@@ -1,25 +1,41 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { adminListAnalysis } from '../../api/api'
+import { adminListAnalysisPage } from '../../api/api'
 
 const router = useRouter()
 const list = ref([])
 const loading = ref(false)
 const error = ref('')
+const page = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 
 async function fetchList() {
   loading.value = true
   error.value = ''
   try {
-    const data = await adminListAnalysis()
-    list.value = Array.isArray(data) ? data : []
+    const data = await adminListAnalysisPage(page.value, pageSize.value)
+    list.value = Array.isArray(data?.list) ? data.list : []
+    total.value = Number(data?.total) || 0
   } catch (e) {
     error.value = e.message || '加载分析结果失败'
     list.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
+}
+
+function onPageChange(p) {
+  page.value = p
+  fetchList()
+}
+
+function onSizeChange(s) {
+  pageSize.value = s
+  page.value = 1
+  fetchList()
 }
 
 function formatTime(t) {
@@ -80,6 +96,17 @@ onMounted(() => fetchList())
           </tbody>
         </table>
         <div v-if="!list.length && !loading" class="admin-empty">暂无分析记录</div>
+        <div v-if="total > 0" class="admin-pagination-wrap">
+          <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50]"
+            :total="total"
+            layout="total, sizes, prev, pager, next"
+            @current-change="onPageChange"
+            @size-change="onSizeChange"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -102,4 +129,5 @@ onMounted(() => fetchList())
 .admin-score--low { color: #ef4444; }
 .admin-cell-summary { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-empty { padding: 40px; text-align: center; color: #94a3b8; }
+.admin-pagination-wrap { margin-top: 16px; display: flex; justify-content: flex-end; }
 </style>

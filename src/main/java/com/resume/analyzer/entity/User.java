@@ -1,11 +1,13 @@
 package com.resume.analyzer.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user")
+@TableName("user")
 public class User {
     @JsonIgnore
     private String password;

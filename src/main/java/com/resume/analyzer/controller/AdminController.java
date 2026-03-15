@@ -32,6 +32,14 @@ public class AdminController {
         return adminService.listUsers();
     }
 
+    /** 分页查询用户（MyBatis-Plus） */
+    @GetMapping("/users/page")
+    public Result<Map<String, Object>> pageUsers(
+            @RequestParam(defaultValue = "1") long page,
+            @RequestParam(defaultValue = "10") long size) {
+        return adminService.pageUsers(page, size);
+    }
+
     @PutMapping("/users/{id}")
     public Result<User> updateUser(@PathVariable Long id, @RequestBody UpdateProfileDTO dto) {
         return adminService.updateUser(id, dto);
@@ -46,6 +54,14 @@ public class AdminController {
     @GetMapping("/jobs")
     public Result<List<Job>> listJobs() {
         return adminService.listJobs();
+    }
+
+    /** 分页查询岗位（MyBatis-Plus） */
+    @GetMapping("/jobs/page")
+    public Result<Map<String, Object>> pageJobs(
+            @RequestParam(defaultValue = "1") long page,
+            @RequestParam(defaultValue = "10") long size) {
+        return adminService.pageJobs(page, size);
     }
 
     @PostMapping("/jobs")
@@ -67,6 +83,14 @@ public class AdminController {
     @GetMapping("/analysis")
     public Result<List<AnalysisListItemDTO>> listAnalysis() {
         return adminService.listAnalysis();
+    }
+
+    /** 分页查询简历分析结果 */
+    @GetMapping("/analysis/page")
+    public Result<Map<String, Object>> pageAnalysis(
+            @RequestParam(defaultValue = "1") long page,
+            @RequestParam(defaultValue = "10") long size) {
+        return adminService.pageAnalysis(page, size);
     }
 
     @GetMapping("/analysis/{id}")
@@ -97,5 +121,24 @@ public class AdminController {
     @GetMapping("/messages")
     public Result<List<Message>> listSentMessages(@RequestParam Long senderId) {
         return messageService.listSentByAdmin(senderId);
+    }
+
+    /** 管理员：收到的用户咨询列表 */
+    @GetMapping("/messages/inquiries")
+    public Result<List<Message>> listInquiries(@RequestParam Long adminId) {
+        return messageService.listInquiriesForAdmin(adminId);
+    }
+
+    /** 管理员：未回复咨询数量（小红点） */
+    @GetMapping("/messages/inquiries/unread-count")
+    public Result<Long> getInquiryUnreadCount(@RequestParam Long adminId) {
+        return messageService.getAdminInquiryUnreadCount(adminId);
+    }
+
+    /** 管理员：回复用户咨询 */
+    @PostMapping("/messages/inquiry/{id}/reply")
+    public Result<Message> replyToInquiry(@PathVariable Long id, @RequestParam Long adminId, @RequestBody Map<String, String> body) {
+        String content = body != null && body.containsKey("content") ? body.get("content") : "";
+        return messageService.adminReplyToInquiry(adminId, id, content);
     }
 }

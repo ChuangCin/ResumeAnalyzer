@@ -18,10 +18,14 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final CacheService cacheService;
+    private final MinioService minioService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, CacheService cacheService, MinioService minioService) {
         this.userRepository = userRepository;
+        this.cacheService = cacheService;
+        this.minioService = minioService;
     }
 
     private static final String ADMIN_REGISTER_CODE = "ADMIN2026";
@@ -98,11 +102,14 @@ public class UserService {
     }
 
     public Result<User> getById(Long id) {
-        User user = userRepository.findById(id).orElse(null);
+        if (id == null) return Result.error("用户不存在");
+        User user = cacheService.getUserInfo(id, User.class);
         if (user == null) {
-            return Result.error("用户不存在");
+            user = userRepository.findById(id).orElse(null);
+            if (user == null) return Result.error("用户不存在");
+            user.setPassword(null);
+            cacheService.setUserInfo(id, user);
         }
-        user.setPassword(null);
         return Result.success(user);
     }
 
@@ -139,10 +146,11 @@ public class UserService {
         }
         userRepository.save(user);
         user.setPassword(null);
+        cacheService.evictUserInfo(id);
         return Result.success(user);
     }
 
-    /** 上传头像：仅允许本人上传，支持 jpg/png/gif/webp */
+    /** 上传头像：仅允许本人上传，支持 jpg/png/gif/webp；优先存 MinIO，失败则落盘；用户信息缓存失效 */
     public Result<User> uploadAvatar(Long userId, MultipartFile file) {
         if (userId == null) return Result.error("请先登录");
         if (file == null || file.isEmpty()) return Result.error("请选择头像文件");
@@ -154,19 +162,33 @@ public class UserService {
         int i = original.lastIndexOf('.');
         if (i > 0) ext = original.substring(i).toLowerCase();
         if (!ext.matches("\\.(jpg|jpeg|png|gif|webp)")) return Result.error("仅支持 JPG、PNG、GIF、WEBP 格式");
-        String dir = System.getProperty("user.dir") + "/uploads/avatars/";
-        File dirFile = new File(dir);
-        if (!dirFile.exists()) dirFile.mkdirs();
         String filename = userId + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12) + ext;
-        String path = dir + filename;
+        String objectKey = "avatars/" + filename;
+        String oldAvatar = user.getAvatar();
+
         try {
-            file.transferTo(new File(path));
-        } catch (IOException e) {
-            return Result.error("保存文件失败");
+            minioService.uploadFile(file, objectKey);
+            if (oldAvatar != null && !oldAvatar.isEmpty()) {
+                try {
+                    minioService.deleteFile("avatars/" + oldAvatar);
+                } catch (Exception ignored) { }
+            }
+        } catch (Exception e) {
+            String dir = System.getProperty("user.dir") + "/uploads/avatars/";
+            File dirFile = new File(dir);
+            if (!dirFile.exists()) dirFile.mkdirs();
+            String path = dir + filename;
+            try {
+                file.transferTo(new File(path));
+            } catch (IOException io) {
+                return Result.error("保存文件失败");
+            }
         }
+
         user.setAvatar(filename);
         userRepository.save(user);
         user.setPassword(null);
+        cacheService.evictUserInfo(userId);
         return Result.success(user);
     }
 }

@@ -11,6 +11,9 @@ import AnalysisResult from './pages/AnalysisResult.vue'
 import ResumeLibrary from './pages/ResumeLibrary.vue'
 import ProfileCenter from './pages/ProfileCenter.vue'
 import MyMessages from './pages/MyMessages.vue'
+import SmartMatch from './pages/SmartMatch.vue'
+import KnowledgeBase from './pages/KnowledgeBase.vue'
+import QAAssistant from './pages/QAAssistant.vue'
 import AdminLayout from './pages/admin/AdminLayout.vue'
 import AdminUsers from './pages/admin/AdminUsers.vue'
 import AdminJobs from './pages/admin/AdminJobs.vue'
@@ -29,6 +32,9 @@ const routes = [
   { path: '/resume-library', component: ResumeLibrary },
   { path: '/profile', component: ProfileCenter },
   { path: '/messages', component: MyMessages },
+  { path: '/smart-match', component: SmartMatch },
+  { path: '/knowledge', component: KnowledgeBase },
+  { path: '/qa-assistant', component: QAAssistant },
   {
     path: '/admin',
     component: AdminLayout,
